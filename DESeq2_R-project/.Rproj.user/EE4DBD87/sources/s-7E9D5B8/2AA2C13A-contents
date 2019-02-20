@@ -1,0 +1,118 @@
+# initialise environment
+setwd("..")
+library(tidyverse)
+
+######################################
+### Prepare gene conversion tables ###
+######################################
+
+# translate the transcripts into genes
+ensembl <- useMart("ensembl",dataset="mmusculus_gene_ensembl")
+attributes <- listAttributes(ensembl)
+
+# you can search for appropriate identifiers using the following:
+hits <- grep(pattern="gene.name", x=attributes$description, ignore.case=T)
+attributes[hits,]
+
+# get list of all mRNA ids to convert:
+eg_quant <- read_tsv("salmon-output/01-EC---3-7-2018_S25_R1_001.quant/quant.sf")
+head(eg_quant)
+
+# create data frame with name conversions
+# transcript names must be stripped of their version ids for this db
+tx2gene <- getBM(attributes=c('refseq_mrna', 'entrezgene', 'uniprot_gn', 'external_gene_name'),
+                 filters = 'refseq_mrna',
+                 values = sub("\\.\\d\\d?", "", eg_quant$Name),
+                 mart = ensembl)
+tx2gene <- as_tibble(tx2gene)
+write.table(as.data.frame(tx2gene), file = "scripts/transcript-name-conversion.csv",
+            quote = FALSE,
+            sep = ',')
+tx2gene
+
+# create dataframe for tximport name conversion:
+tx2gene_mart <- tx2gene %>% 
+  dplyr::select(refseq_mrna, entrezgene) %>% 
+  unique()
+
+dim(tx2gene_mart)
+
+# remove the rows with no corresponding geneid
+tx2gene_mart_clean <- tx2gene_mart[complete.cases(tx2gene_mart),]
+dim(tx2gene_mart_clean)
+
+
+###################################
+### Prepare Salmon quant files  ###
+###################################
+
+# set salmon quantification file locations and details
+data_dir <- "salmon-output/"
+list.files(data_dir)
+samples <- read_tsv(file.path("docs", "sample_info.txt"), col_names = TRUE )
+samples$sample_name <- paste(samples$condition, samples$cell, samples$replicate, sep="_")
+
+# set condition and cell type as factors:
+samples$condition <- factor(samples$condition, levels = c("WT","PBS", "Knull", "KO1", "KO2"))
+samples$cell <- factor(samples$cell, levels = c("EC", "MG"))
+
+samples_all <- samples %>% 
+    dplyr::filter(condition!="Knull")
+
+
+files <- paste(data_dir,samples_all$filename,"/quant.sf", sep="")
+all(file.exists(files))
+# trim the version numbers from the  mRNA names
+# This only needs to be done once, to create the files
+#for(F in files){tmptibble <- read_tsv(F);
+#                tmptibble$Name <- sub("\\.\\d\\d?", "", tmptibble$Name);
+#                write_delim(x = tmptibble,
+#                            path = paste(F,"trim",sep = "."),
+#                            delim = "\t",
+#                            col_names = TRUE)
+#}
+
+# update the file names:
+files_trimmed <- paste(data_dir,samples_all$filename,"/quant.sf.trim", sep="")
+
+names(files_trimmed) <- paste(samples_all$condition, 
+                              samples_all$cell, 
+                              samples_all$replicate, sep="_")
+all(file.exists(files_trimmed))
+
+
+# import into tximport data frame
+library(tximport)
+txi <- tximport(files_trimmed, type = "salmon", tx2gene = tx2gene_mart_clean)
+names(txi)
+head(txi$counts)
+
+###################################
+###         run DESeq2          ###
+###################################
+
+# for details, see http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
+
+library(DESeq2)
+
+# create DESeq2 Data Set dds_ec
+dds <- DESeqDataSetFromTximport(txi, 
+                                samples_all, 
+                                ~ replicate + condition + cell + condition:cell)
+
+dds <- DESeq(dds, test="LRT", reduced = ~ replicate)
+
+res <- results(dds, alpha = 0.05)
+
+summary(res)
+
+write.csv(res, file = "DESeq2_R-project/res_all-cells-combined-results.csv")
+
+# extract the variance stabilized transformed counts:
+vsd <- vst(dds, blind = TRUE)
+#vsd_ec <- varianceStabilizingTransformation(dds_ec, blind = TRUE)
+vsd_mat <- assay(vsd)
+write.table(as.data.frame(vsd_mat), file = "DESeq2_R-project/counts-allcells-vst.csv")
+
+# print the session info for reproducibility
+sessionInfo()

@@ -1,0 +1,5 @@
+# this is used to construct the input file for the Salmon run script
+# note that Salmon does not support combining paired-end and single-end reads TOGETHER.
+ls '/media/poxley/8B07-96D3/NS1803074_R2'| grep 'fastq.gz' | \
+sed -n 'N;s@\n@ @;p' | \
+sed -e 's@\(\S*\).fastq.gz \(\S*\).fastq.gz@-1 /home/poxley/Documents/bioinformatics/Projects/20180518_Goncalo/trimmomatic-output/\1.paired_trimmed.fastq.gz -2 /home/poxley/Documents/bioinformatics/Projects/20180518_Goncalo/trimmomatic-output/\2.paired_trimmed.fastq.gz  -o /home/poxley/Documents/bioinformatics/Projects/20180518_Goncalo/salmon-output/\1.quant@g ' > '/home/poxley/Documents/bioinformatics/Projects/20180518_Goncalo/scripts/io.salmon.txt' 

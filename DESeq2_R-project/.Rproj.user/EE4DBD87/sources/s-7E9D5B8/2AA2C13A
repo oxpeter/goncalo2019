@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1527803988798.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1848986902",
+    "id" : "2AA2C13A",
+    "lastKnownWriteTime" : 1527867114,
+    "last_content_update" : 1527867114644,
+    "path" : "~/Documents/bioinformatics/Projects/20180518_Goncalo/DESeq2_R-project/02_20180530_DESeq2-analysis-altogether.R",
+    "project_path" : "02_20180530_DESeq2-analysis-altogether.R",
+    "properties" : {
+        "cursorPosition" : "115,0",
+        "scrollLine" : "79"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
