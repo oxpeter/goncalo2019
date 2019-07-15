@@ -1,4 +1,6 @@
 
+[![DOI](https://zenodo.org/badge/171735540.svg)](https://zenodo.org/badge/latestdoi/171735540)
+
 ## Methods
 ### RNASeq Quality check and alignment
 RNASeq fastq files were analyzed with FastQC[1] v0.11.7 to assess sequence base quality, per-base sequence content, GC content, N content, and the sequence length distribution. Reads were subsequently trimmed using Trimmomatic[2] v0.38, to remove Illumina adapters, leading and trailing bases with score ≤ 3, all bases after the sliding window average ≤ 15, and all edited reads ≤ 36 bp.
